@@ -1,118 +1,57 @@
-import random
+from flask import Flask, request, render_template_string
+import sqlite3
 
-censo = []
-alfabeto = "ABCDEFGHIJKLMNOPQRSTUVWXYZAEIOUAEOI"
-numero = 0
+app = Flask(__name__) #crear aplicacion de flask
 
-print("Creando censo...")
+def get_db_connection():
+  conn=sqlite3.connect('censo.db')
+  conn.row_factory=sqlite3.Row
+  return conn
 
-for i in range(500_000):
-  aumento = random.randint(1,2)
-  numero += aumento
+#Ruta para la página de inicio
 
-  letras = random.sample(alfabeto, 5)
-  nombre = "".join(letras)
+@app.route('/')
 
-  edad = random.randint(18,99)
+def index():
+  return render_template_string(''' 
+  <h1> Busqueda en el Censo </h1>
+  <form action="/buscar" method="post">
+    <label for="tipo">Busca por:</label>
+    <select name="tipo" id="tipo">
+      <option value="numero">Numero</option>
+      <option value="nombre">Nombre</option>
+    </select>
+    <label for="valor">Valor:</label>
+    <input type="text" name="valor" id="valor" required>
+    <button type="submit">Buscar</Button>
+  </form>
+  ''')
+  
+#Ruta para realizar la busqueda
+@app.route('/buscar', methods=['POST'])
+def buscar():
+  tipo=request.form['tipo']
+  valor=request.form['valor']
+  conn=get_db_connection()
+  registro=None
 
-  impuestos = random.choice((True, True, True, False))
+  if tipo=='numero':
+    registro = conn.execute('SELECT * FROM censo Where numero = ?',(valor,)).fetchone()
+  elif tipo=='nombre':
+    registro=conn.execute('SELECT * FROM censo WHERE nombre = ?',(valor,)).fetchone()
 
-  censo.append([numero, nombre, edad, impuestos])
+  conn.close()
 
-  if len(censo) % 100_000 == 0:
-    print("Creados", len(censo), "registros")
-
-print("Censo creado.")
-print("Ultimo registro: ", censo[-1])
-
-def busqueda_numero(lista, elemento):
-  '''Busca registros por numero. Busqueda binaria'''
-
-  inicio = 0
-  final = len(lista) - 1
-
-  while inicio <= final:
-    medio = (inicio + final) // 2
-    if lista[medio][0] == elemento:
-      return lista[medio]
-    elif lista[medio][0] < elemento:
-      inicio = medio + 1
-    elif lista[medio][0] > elemento:
-      final = medio - 1
-  return None
-
-def busqueda_nombre(lista, elemento):
-  '''Busca registros por nombre. Busqueda lineal'''
-
-  encontrados = []
-
-  for registro in lista:
-    if registro[1] == elemento:
-      encontrados.append(registro)
-  if len(encontrados) == 0:
-    return None
+  if registro:
+    return render_template_string('''
+    <p>Número: {{ registro['numero'] }}</p>
+    <p>Nombre: {{ registro['nombre'] }}</p>
+    <p>Edad: {{ registro['edad'] }}</p>
+    <p>Impuestos: {{ registro['impuestos'] }}</p>
+    <a href="/">Volver</a>
+    ''', registro=registro)
   else:
-    return encontrados
+    return 'Registro no encontrado. <a href="/">Volver</a>' 
 
-def muestra_registro(registro):
-  if registro == None:
-    print("No existe registro con ese dato")
-  else:
-    print("--------------------------------")
-    print("Numero:", registro[0]) # Cedula
-    print("Nombre", registro[1])
-    print("Edad:", registro[2])
-    print("Impuestos:", registro[3])
-
-
-
-def menu():
-
-  print("--------------------------")
-  print("- CENSO DE POBLACION -")
-  print("1. Buscar por numero")
-  print("2. Buscar por nombre")
-  print("3. Salir")
-
-  opcion = ""
-  while opcion not in ("1", "2", "3"):
-    opcion = input("--> ")
-  return opcion
-
-
-while True:
-  op = menu()
-
-  if op == "1":
-    try:
-      numero=int(input("Introduce numero: "))
-    except ValueError:
-      print("Introduce un numero entero")
-    else:
-      registro = busqueda_numero(censo, numero)
-      muestra_registro(registro)
-
-  elif op == "2":
-    nombre=input("Introduce nombre: ").upper()
-    registros = busqueda_nombre(censo,nombre)
-    if registros == None:
-      print("No existe registro con ese dato")
-    else:
-      for registro in registros:
-        muestra_registro(registro)
-
-  elif op == "3":
-    break
-
-
-"""
-Instalar un sistema de bases de datos en local
-Guardar el censo en la base de datos.
-CENSO
-  Tabla - Censo 2023
-  Columnas -> Nombre, Numero, Edad, Impuestos
-MYSQL
--> Como Crear una pagina web con un formulario de consulta usando python. 
-Flask y Django
-Opcional -> Pycharm
-"""
+if __name__ == '__main__':
+  app.run(host='0.0.0.0',port=5001)

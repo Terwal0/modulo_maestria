@@ -1,17 +1,19 @@
 from flask import Flask, request, render_template_string
 import sqlite3
 
-app = Flask(__name__) #crear aplicacion de flask
+app = Flask(__name__)  #crear aplicacion de flask
+
 
 def get_db_connection():
-  conn=sqlite3.connect('censo.db')
-  conn.row_factory=sqlite3.Row
+  conn = sqlite3.connect('censo.db')
+  conn.row_factory = sqlite3.Row
   return conn
+
 
 #Ruta para la página de inicio
 
-@app.route('/')
 
+@app.route('/')
 def index():
   return render_template_string(''' 
   <h1> Busqueda en el Censo </h1>
@@ -26,19 +28,22 @@ def index():
     <button type="submit">Buscar</Button>
   </form>
   ''')
-  
+
+
 #Ruta para realizar la busqueda
 @app.route('/buscar', methods=['POST'])
 def buscar():
-  tipo=request.form['tipo']
-  valor=request.form['valor']
-  conn=get_db_connection()
-  registro=None
+  tipo = request.form['tipo']
+  valor = request.form['valor']
+  conn = get_db_connection()
+  registro = None
 
-  if tipo=='numero':
-    registro = conn.execute('SELECT * FROM censo Where numero = ?',(valor,)).fetchone()
-  elif tipo=='nombre':
-    registro=conn.execute('SELECT * FROM censo WHERE nombre = ?',(valor,)).fetchone()
+  if tipo == 'numero':
+    registro = conn.execute('SELECT * FROM censo Where numero = ?',
+                            (valor, )).fetchone()
+  elif tipo == 'nombre':
+    registro = conn.execute('SELECT * FROM censo WHERE nombre = ?',
+                            (valor, )).fetchone()
 
   conn.close()
 
@@ -49,9 +54,11 @@ def buscar():
     <p>Edad: {{ registro['edad'] }}</p>
     <p>Impuestos: {{ registro['impuestos'] }}</p>
     <a href="/">Volver</a>
-    ''', registro=registro)
+    ''',
+                                  registro=registro)
   else:
-    return 'Registro no encontrado. <a href="/">Volver</a>' 
+    return 'Registro no encontrado. <a href="/">Volver</a>'
+
 
 if __name__ == '__main__':
-  app.run(host='0.0.0.0',port=5001)
+  app.run(host='0.0.0.0', port=5001)
